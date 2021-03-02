@@ -20,12 +20,17 @@ queue_t *q_new()
     return q;
 }
 
-/* Free all storage used by queue */
+/*
+    Free all storage used by queue
+    if q is NULL, then return
+*/
 void q_free(queue_t *q)
 {
+    if (q == NULL)
+        return;
     /* Free queue structure */
     list_ele_t *cur = q->head;
-    while (cur) {
+    while (cur != NULL) {
         list_ele_t *tar = cur;
         cur = cur->next;
         /* freeing the the string */
@@ -45,18 +50,25 @@ void q_free(queue_t *q)
  */
 bool q_insert_head(queue_t *q, char *s)
 {
+    if (q == NULL)
+        return false;
     list_ele_t *newh = NULL;
 
     /* check call to malloc returns NULL */
     newh = malloc(sizeof(list_ele_t));
-    bzero(newh, sizeof(list_ele_t));
     if (newh == NULL)
         return false;
+
+    bzero(newh, sizeof(list_ele_t));
+    newh->value = strdup(s);
+    if (newh->value == NULL) {
+        free(newh);
+        return false;
+    }
 
     if (!(q->tail))
         q->tail = newh;
     newh->next = q->head;
-    newh->value = strdup(s);
     q->head = newh;
 
     q->count++;
@@ -76,10 +88,14 @@ bool q_insert_tail(queue_t *q, char *s)
         return false;
     list_ele_t *newt = NULL;
     newt = malloc(sizeof(list_ele_t));
-    bzero(newt, sizeof(list_ele_t));
     if (newt == NULL)
         return false;
+    bzero(newt, sizeof(list_ele_t));
     newt->value = strdup(s);
+    if (newt->value == NULL) {
+        free(newt);
+        return false;
+    }
 
     if (!(q->head))
         q->head = newt;
@@ -102,11 +118,16 @@ bool q_insert_tail(queue_t *q, char *s)
  */
 bool q_remove_head(queue_t *q, char *sp, size_t bufsize)
 {
-    list_ele_t *target = q->head;
-    if (target == NULL || target->value == NULL)
+    if (q == NULL || q->count == 0)
         return false;
+
+    list_ele_t *target = q->head;
+
     if (sp) {
         size_t slen = strnlen(target->value, bufsize);
+        if (slen == bufsize)
+            slen--;
+        bzero(sp, bufsize);
         strncpy(sp, target->value, slen);
     }
     free(target->value);
@@ -124,6 +145,9 @@ bool q_remove_head(queue_t *q, char *sp, size_t bufsize)
  */
 int q_size(queue_t *q)
 {
+    if (q == NULL)
+        return 0;
+
     return q->count;
 }
 
@@ -159,8 +183,60 @@ void q_reverse(queue_t *q)
  * No effect if q is NULL or empty. In addition, if q has only one
  * element, do nothing.
  */
+list_ele_t *merge_combine(list_ele_t *l1, list_ele_t *l2)
+{
+    list_ele_t tmp_ele, *cur = &tmp_ele;
+
+    while (cur != NULL) {
+        if (l1 == NULL) {
+            cur->next = l2;
+            break;
+        } else if (l2 == NULL) {
+            cur->next = l1;
+            break;
+        } else {
+            list_ele_t **tar = ((strcmp(l1->value, l2->value) < 1) ? &l1 : &l2);
+            cur->next = (*tar);
+            *tar = (*tar)->next;
+            cur = cur->next;
+            cur->next = NULL;
+        }
+    }
+    return tmp_ele.next;
+}
+/*
+    the main sorting algorithm
+*/
+list_ele_t *merge_sort(list_ele_t *start, size_t len)
+{
+    if (len == 0 || len == 1)
+        return start;
+
+    size_t l1_len = len / 2, l2_len = len - l1_len;
+    list_ele_t *l1 = start, *l2 = start;
+
+    for (int i = 0; i < l1_len; ++i) {
+        if (i != l1_len - 1) {
+            l2 = l2->next;
+        } else {
+            list_ele_t *tmp = l2;
+            l2 = l2->next;
+            tmp->next = NULL;
+        }
+    }
+
+    l1 = merge_sort(l1, l1_len);
+    l2 = merge_sort(l2, l2_len);
+    return merge_combine(l1, l2);
+}
+
 void q_sort(queue_t *q)
 {
-    /* TODO: You need to write the code for this function */
-    /* TODO: Remove the above comment when you are about to implement. */
+    if (q == NULL || q->count == 0)
+        return;
+
+    q->head = merge_sort(q->head, q->count);
+    q->tail = q->head;
+    while (q->tail->next != NULL)
+        q->tail = q->tail->next;
 }
