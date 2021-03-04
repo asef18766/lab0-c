@@ -8,7 +8,7 @@
 /* Implementation of simple command-line interface */
 
 /* Simulation flag of console option */
-extern int simulation; /*TODO: proof*/
+extern int simulation;
 
 /* Each command defined in terms of a function */
 typedef bool (*cmd_function)(int argc, char *argv[]);
